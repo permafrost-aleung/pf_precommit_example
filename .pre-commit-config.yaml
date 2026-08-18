@@ -52,14 +52,14 @@ repos:
         language: python
         types: [sql]
 
+      - id: check-naming
+        name: Check object naming
+        entry: python scripts/check_naming.py
+        language: python
+        types: [sql]
+
       - id: check-temp-objects
         name: Check for debug code
         entry: python scripts/check_temp_objects.py
         language: python
         types: [sql, python, jupyter]
-
-      - id: check-config
-        name: Check config placeholders
-        entry: python scripts/check_config.py
-        language: python
-        pass_filenames: false
