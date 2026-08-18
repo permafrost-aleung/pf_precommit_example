@@ -4,8 +4,8 @@
 > commit or push changes to it directly. Use the template to create your own
 > copy and do all your work there.
 
-This tutorial walks through setting up and running pre-commit hooks on a
-Permafrost PoC project. You will start with broken delivery artifacts, run
+This tutorial introduces [pre-commits](https://pre-commit.com/) and walks through setting up and running pre-commit hooks on a
+toy project. You will start with broken delivery artifacts, run
 the hooks, fix what cannot be auto-fixed, and end with a clean commit.
 
 ---
@@ -50,6 +50,42 @@ precommit-tutorial/
 
 ---
 
+## How pre-commit works
+
+Pre-commit runs hooks automatically every time you run `git commit`. It only
+scans files that are staged, so you must run `git add` before committing or
+the hooks will report "no files to check" and skip.
+
+The first commit in a new repo triggers hook environment setup. Pre-commit
+downloads and installs each hook's dependencies into an internal cache. This
+only happens once and can take a minute. Subsequent commits are faster.
+
+When a hook fails, the commit is blocked. You will see an error message
+explaining what the hook found. Some hooks also rewrite files automatically
+as part of the check. When that happens, the commit is still blocked because
+the files changed after you staged them. You need to stage the rewritten files
+and commit again.
+
+The general cycle is:
+
+1. `git add .` to stage your files.
+2. `git commit` to trigger the hooks.
+3. If hooks auto-fix files, `git add .` again and retry the commit.
+4. If hooks flag manual violations, fix them, `git add .`, and retry the commit.
+5. Repeat until all hooks pass and the commit goes through.
+
+If you need to bypass the hooks entirely for a single commit, use:
+
+```bash
+git commit -m "your message" --no-verify
+```
+
+Use this sparingly. It skips all checks and should only be used when you
+intentionally need to commit something that would otherwise fail, like the
+broken tutorial artifacts in this repo.
+
+---
+
 ## Prerequisites
 
 You need Python 3.11+ and Git. If you do not have Python 3.11+, install it
@@ -81,7 +117,18 @@ All steps from here on are run from inside your cloned repo.
 A virtual environment keeps the tools for this project separate from your
 system Python. Pick one of the two approaches below.
 
-### Option A: uv (recommended)
+### Option A: Python native venv
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # On Windows: .venv\Scripts\activate
+pip install pre-commit
+```
+
+You need to activate the environment every time you open a new terminal
+session before running any `pre-commit` commands.
+
+### Option B: uv (recommended)
 
 uv is faster than pip and handles both the environment and package installs
 in one tool. Install it if you do not have it:
@@ -98,16 +145,7 @@ source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 uv pip install pre-commit
 ```
 
-### Option B: Python native venv
 
-```bash
-python -m venv .venv
-source .venv/bin/activate   # On Windows: .venv\Scripts\activate
-pip install pre-commit
-```
-
-You need to activate the environment every time you open a new terminal
-session before running any `pre-commit` commands.
 
 ---
 
@@ -188,12 +226,57 @@ and `analysis.ipynb`.
 
 **transform.py**
 
-- Lines with `print()` calls. Remove them or replace with `logging`.
+- Lines with `print()` calls. Replace them with `logging`. Add
+  `import logging` at the top of the file and replace each `print()` call
+  like this:
+
+  ```python
+  # before
+  print("loading data from table: " + table_name)
+
+  # after
+  import logging
+
+  logging.basicConfig(level=logging.INFO)
+  logger = logging.getLogger(__name__)
+
+  logger.info("loading data from table: %s", table_name)
+  ```
+
 - A `# HACK` comment. Remove the comment and the workaround, or fix the
   underlying issue.
+
 - A hardcoded Snowflake account URL and password in the `__main__` block.
-  Remove the hardcoded values. Connection params should come from environment
-  variables or a Snowflake CLI connection, not from a script.
+  Never put credentials in a script. Use environment variables instead and
+  read them at runtime with `os.environ`:
+
+  ```python
+  import os
+
+  connection_params = {
+      "account":   os.environ["SNOWFLAKE_ACCOUNT"],
+      "user":      os.environ["SNOWFLAKE_USER"],
+      "password":  os.environ["SNOWFLAKE_PASSWORD"],
+      "warehouse": os.environ["SNOWFLAKE_WAREHOUSE"],
+      "database":  os.environ["SNOWFLAKE_DATABASE"],
+      "schema":    os.environ["SNOWFLAKE_SCHEMA"],
+  }
+  ```
+
+  Set the variables in your terminal before running the script:
+
+  ```bash
+  export SNOWFLAKE_ACCOUNT="myorg-myaccount"
+  export SNOWFLAKE_USER="myuser"
+  export SNOWFLAKE_PASSWORD="mypassword"
+  export SNOWFLAKE_WAREHOUSE="MY_WH"
+  export SNOWFLAKE_DATABASE="MY_DB"
+  export SNOWFLAKE_SCHEMA="MY_SCHEMA"
+  ```
+
+  On Permafrost projects you can also use a Snowflake CLI connection and drop
+  the password entirely. See `SNOWCLI_SETUP.md` for setup instructions.
+
 - A block of four or more consecutive commented-out lines at the top of the
   file. Remove the block.
 
