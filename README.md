@@ -86,15 +86,15 @@ The general cycle is:
 4. If hooks flag manual violations, fix them, `git add .`, and retry the commit.
 5. Repeat until all hooks pass and the commit goes through.
 
-If you need to bypass the hooks entirely for a single commit, use:
-
-```bash
-git commit -m "your message" --no-verify
-```
-
-Use this sparingly. It skips all checks and should only be used when you
-intentionally need to commit something that would otherwise fail, like the
-broken tutorial artifacts in this repo.
+> **NOTE:** If you need to bypass the hooks entirely for a single commit, use:
+>
+>```bash
+>git commit -m "your message" --no-verify
+>```
+>
+>Use this sparingly. It skips all checks and should only be used when you
+>intentionally need to commit something that would otherwise fail, like the
+>broken tutorial artifacts in this repo.
 
 ---
 
