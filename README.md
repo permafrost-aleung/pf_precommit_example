@@ -268,22 +268,6 @@ length limit.
 
 ---
 
-### config.py
-
-**`check-config`** flagged unreplaced placeholders. Replace all `YOUR_<SOMETHING>`
-values with real values for your environment:
-
-```python
-ACCOUNT   = "myorg-myaccount"
-USER      = "myuser"
-WAREHOUSE = "MY_WAREHOUSE"
-DATABASE  = "MY_DATABASE"
-SCHEMA    = "MY_SCHEMA"
-ROLE      = "MY_ROLE"
-```
-
----
-
 ### analysis.ipynb
 
 **`check-temp-objects`** flagged a hardcoded account URL and password in cell 1.
