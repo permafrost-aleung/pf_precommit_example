@@ -4,9 +4,13 @@
 > commit or push changes to it directly. Use the template to create your own
 > copy and do all your work there.
 
-This tutorial introduces [pre-commits](https://pre-commit.com/) and walks through setting up and running pre-commit hooks on a
-toy project. You will start with broken delivery artifacts, run
+This tutorial walks through setting up and running pre-commit hooks on a
+Permafrost PoC project. You will start with broken delivery artifacts, run
 the hooks, fix what cannot be auto-fixed, and end with a clean commit.
+
+> **Scope:** This tutorial is about code hygiene only. The delivery artifacts
+> are intentionally broken for learning purposes and are not meant to be run
+> against a real Snowflake environment.
 
 ---
 
@@ -15,7 +19,6 @@ the hooks, fix what cannot be auto-fixed, and end with a clean commit.
 ```
 precommit-tutorial/
   .pre-commit-config.yaml       # Hook configuration
-  package.sh                    # Script to zip delivery/ for client handoff
   README.md                     # This file
   delivery/
     python/
@@ -47,6 +50,8 @@ precommit-tutorial/
 | `check-naming` | - | Bad object names in SQL (e.g. `_v2`, `tmp_`, `_final`) |
 | `check-temp-objects` | - | Debug code, hardcoded paths, credentials |
 | `check-config` | - | Unreplaced `YOUR_<SOMETHING>` placeholders in config files |
+
+Hooks run in the order listed above.
 
 ---
 
@@ -117,18 +122,7 @@ All steps from here on are run from inside your cloned repo.
 A virtual environment keeps the tools for this project separate from your
 system Python. Pick one of the two approaches below.
 
-### Option A: Python native venv
-
-```bash
-python -m venv .venv
-source .venv/bin/activate   # On Windows: .venv\Scripts\activate
-pip install pre-commit
-```
-
-You need to activate the environment every time you open a new terminal
-session before running any `pre-commit` commands.
-
-### Option B: uv (recommended)
+### Option A: uv (recommended)
 
 uv is faster than pip and handles both the environment and package installs
 in one tool. Install it if you do not have it:
@@ -145,14 +139,25 @@ source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 uv pip install pre-commit
 ```
 
+### Option B: Python native venv
 
+```bash
+python -m venv .venv
+source .venv/bin/activate   # On Windows: .venv\Scripts\activate
+pip install pre-commit
+```
+
+You need to activate the environment every time you open a new terminal
+session before running any `pre-commit` commands.
 
 ---
 
 ## Step 2: Install the hooks
 
-Run this once from the repo root. It registers the hooks so they fire on every
-`git commit`.
+Run this once from the repo root. It reads `.pre-commit-config.yaml` and
+registers each hook into `.git/hooks/` so they fire automatically on every
+`git commit`. Pre-commit also downloads and caches the environment for each
+hook the first time it runs - this can take a minute but only happens once.
 
 ```bash
 pre-commit install
@@ -160,75 +165,78 @@ pre-commit install
 
 ---
 
-## Step 3: Try to commit the broken artifacts
+## Step 3: Run hooks across all files
 
-Stage all the files and try to commit.
+Run all hooks across all files at once:
 
 ```bash
-git add .
-git commit -m "initial delivery artifacts"
+pre-commit run --all-files
 ```
 
-The commit will be blocked. You will see output from each hook. Some hooks
-will have modified files automatically. Others will have printed errors that
-you need to fix by hand.
+You will see output from every hook. The following hooks rewrite files
+automatically: `sqlfluff-fix`, `black`, `isort`, `nbstripout`, `nbqa-black`,
+and `nbqa-isort`. The remaining hooks flag violations that need manual fixes.
+Run it a second time after the auto-fixes to see only what remains:
+
+```bash
+pre-commit run --all-files
+```
+
+> **Note:** You can also target a single file if you want to focus on one
+> thing at a time:
+> ```bash
+> pre-commit run --files delivery/sql/01_create_objects.sql
+> ```
 
 ---
 
-## Step 4: Stage the auto-fixed files and commit again
+## Step 4: Fix the remaining violations by hand
 
-After the first run, check what changed:
+Work through each file below. Fix everything in one file before moving to the
+next.
 
-```bash
-git diff
+### 01_create_objects.sql
+
+**`sqlfluff-lint`** flagged one violation that `sqlfluff-fix` could not rewrite:
+
+- `SELECT *` in the view definition. Replace it with an explicit column list:
+
+```sql
+CREATE OR REPLACE VIEW vw_orders AS
+    SELECT
+        order_id,
+        customer_id,
+        order_date,
+        amount,
+        status
+    FROM stg_orders
+    WHERE status = 'COMPLETE';
 ```
 
-The following hooks will have already rewritten files for you:
+**`check-naming`** flagged three bad object names:
 
-- `sqlfluff-fix` rewrote `01_create_objects.sql` to fix keyword casing and indentation.
-- `black` rewrote `transform.py` and `config.py` to fix spacing and line length.
-- `isort` rewrote the import blocks in `transform.py` and `config.py`.
-- `nbstripout` removed cell outputs and execution counts from `analysis.ipynb`.
-- `nbqa-black` and `nbqa-isort` reformatted the Python cells inside `analysis.ipynb`.
+- `stg_orders_v2` has a version suffix `_v2`. Rename it to `stg_orders`.
+- `vw_orders_final` has a banned suffix `_final`. Rename it to `vw_orders`.
+- `tmp_order_summary` has a banned prefix `tmp_`. Rename it to `order_summary`.
 
-Stage the auto-fixed files:
+Update every reference to each name in the file.
 
-```bash
-git add .
-git commit -m "initial delivery artifacts"
-```
-
-The commit will be blocked again. The auto-fixers are done, but violations that
-require manual fixes are still present.
+**`check-temp-objects`** flagged a block of four consecutive commented-out lines
+above the view definition. Remove the block entirely. Do not replace it with a
+single long comment line as `sqlfluff-lint` will flag it for exceeding the line
+length limit.
 
 ---
 
-## Step 5: Fix the remaining violations by hand
+### transform.py
 
-The hooks that flag but do not fix will have printed specific errors. Work
-through each one.
+**`check-temp-objects`** flagged four issues:
 
-### check-naming
+- A block of four or more consecutive commented-out lines at the top of the
+  file. Remove the block.
 
-The hook flagged bad object names in `01_create_objects.sql`:
-
-- `stg_orders_v2` contains a version suffix `_v2`. Rename it to `stg_orders`.
-- `vw_orders_final` contains `_final`. Rename it to `vw_orders`.
-- `tmp_order_summary` has a `tmp_` prefix. Rename it to `order_summary`.
-
-Open `01_create_objects.sql` and rename the objects. Update every reference to
-each name in the file.
-
-### check-temp-objects
-
-The hook flagged several issues across `transform.py`, `01_create_objects.sql`,
-and `analysis.ipynb`.
-
-**transform.py**
-
-- Lines with `print()` calls. Replace them with `logging`. Add
-  `import logging` at the top of the file and replace each `print()` call
-  like this:
+- `print()` calls throughout the file. Replace them with `logging`. Add
+  `import logging` at the top of the file and replace each call like this:
 
   ```python
   # before
@@ -247,57 +255,15 @@ and `analysis.ipynb`.
   underlying issue.
 
 - A hardcoded Snowflake account URL and password in the `__main__` block.
-  Never put credentials in a script. Use environment variables instead and
-  read them at runtime with `os.environ`:
+  Remove the hardcoded values.
+  instructions.
 
-  ```python
-  import os
+---
 
-  connection_params = {
-      "account":   os.environ["SNOWFLAKE_ACCOUNT"],
-      "user":      os.environ["SNOWFLAKE_USER"],
-      "password":  os.environ["SNOWFLAKE_PASSWORD"],
-      "warehouse": os.environ["SNOWFLAKE_WAREHOUSE"],
-      "database":  os.environ["SNOWFLAKE_DATABASE"],
-      "schema":    os.environ["SNOWFLAKE_SCHEMA"],
-  }
-  ```
+### config.py
 
-  Set the variables in your terminal before running the script:
-
-  ```bash
-  export SNOWFLAKE_ACCOUNT="myorg-myaccount"
-  export SNOWFLAKE_USER="myuser"
-  export SNOWFLAKE_PASSWORD="mypassword"
-  export SNOWFLAKE_WAREHOUSE="MY_WH"
-  export SNOWFLAKE_DATABASE="MY_DB"
-  export SNOWFLAKE_SCHEMA="MY_SCHEMA"
-  ```
-
-  On Permafrost projects you can also use a Snowflake CLI connection and drop
-  the password entirely. See `SNOWCLI_SETUP.md` for setup instructions.
-
-- A block of four or more consecutive commented-out lines at the top of the
-  file. Remove the block.
-
-**01_create_objects.sql**
-
-- A block of four commented-out lines above the view definition. Remove the
-  block or replace it with a single `-- TODO:` placeholder if the note is
-  still needed.
-
-**analysis.ipynb**
-
-- A hardcoded account URL and password in cell 1. Remove them. The notebook
-  uses `get_active_session()` which does not need credentials.
-
-### check-config
-
-The hook flagged unreplaced placeholders in `config.py` and `analysis.ipynb`.
-
-**config.py**
-
-Replace all `YOUR_<SOMETHING>` values with real values for your environment:
+**`check-config`** flagged unreplaced placeholders. Replace all `YOUR_<SOMETHING>`
+values with real values for your environment:
 
 ```python
 ACCOUNT   = "myorg-myaccount"
@@ -308,53 +274,33 @@ SCHEMA    = "MY_SCHEMA"
 ROLE      = "MY_ROLE"
 ```
 
-**analysis.ipynb**
+---
 
-Replace `YOUR_WAREHOUSE`, `YOUR_DATABASE`, and `YOUR_SCHEMA` in cell 1 with
-real values.
+### analysis.ipynb
 
-### sqlfluff-lint
+**`check-temp-objects`** flagged a hardcoded account URL and password in cell 1.
+Remove them. The notebook uses `get_active_session()` which does not need
+credentials.
 
-After `sqlfluff-fix` ran, one violation remains in `01_create_objects.sql`:
-
-- `SELECT *` in the view definition. SQLFluff flags this but cannot rewrite it
-  because it does not know which columns you want. Replace `select *` with
-  the explicit column list:
-
-```sql
-CREATE OR REPLACE VIEW vw_orders AS
-    SELECT
-        order_id,
-        customer_id,
-        order_date,
-        amount,
-        status
-    FROM stg_orders
-    WHERE status = 'COMPLETE';
-```
+**`check-config`** flagged unreplaced placeholders in cell 1. Replace
+`YOUR_WAREHOUSE`, `YOUR_DATABASE`, and `YOUR_SCHEMA` with real values.
 
 ---
 
-## Step 6: Commit the clean artifacts
+## Step 5: Confirm everything passes and commit
 
-Once all manual fixes are done, stage and commit:
+Once each file passes on its own, do a final check across all files together:
+
+```bash
+pre-commit run --all-files
+```
+
+If everything passes, stage and commit:
 
 ```bash
 git add .
 git commit -m "initial delivery artifacts"
 ```
 
-All hooks should pass and the commit goes through.
-
----
-
-## Step 7: Package for client handoff
-
-When the PoC is ready to ship, run the package script from the repo root:
-
-```bash
-bash package.sh
-```
-
-This produces a zip file named `delivery-YYYYMMDD.zip` containing only the
-`delivery/` folder. Hand this zip to the client.
+The hooks fire one more time on the staged files. All of them should pass and
+the commit goes through.
