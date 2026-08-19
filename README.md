@@ -154,8 +154,8 @@ source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 uv pip install pre-commit
 ```
 
-You need to activate the environment every time you open a new terminal
-session before running any `pre-commit` commands.
+> **NOTE:** You need to activate the environment every time you open a new terminal
+> session before running any `pre-commit` commands.
 
 ---
 
