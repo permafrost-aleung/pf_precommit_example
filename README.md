@@ -51,7 +51,6 @@ precommit-tutorial/
 | `nbqa-isort` | Import ordering in notebook cells | - |
 | `check-naming` | - | Bad object names in SQL (e.g. `_v2`, `tmp_`, `_final`) |
 | `check-temp-objects` | - | Debug code, hardcoded paths, credentials |
-| `check-config` | - | Unreplaced `YOUR_<SOMETHING>` placeholders in config files |
 
 Hooks run in the order listed above.
 
