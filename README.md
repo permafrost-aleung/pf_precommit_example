@@ -8,7 +8,7 @@ This tutorial walks through setting up and running pre-commit hooks on a
 Permafrost PoC project. You will start with broken delivery artifacts, run
 the hooks, fix what cannot be auto-fixed, and end with a clean commit.
 
-> **Scope:** This tutorial is about code hygiene only. The delivery artifacts
+> **Scope:** This tutorial is about code hygiene only. The artifacts in the `delivery/` folder
 > are intentionally broken for learning purposes and are not meant to be run
 > against a real Snowflake environment.
 
@@ -52,6 +52,13 @@ precommit-tutorial/
 | `check-config` | - | Unreplaced `YOUR_<SOMETHING>` placeholders in config files |
 
 Hooks run in the order listed above.
+
+All hooks are configured in `.pre-commit-config.yaml` at the repo root. 
+You can add new hooks, remove ones you do not need, adjust file filters, 
+change tool versions, or add arguments to any hook by editing that file. 
+The custom hooks in `scripts/` can also be extended - for example, 
+adding new bad name patterns to `check_naming.py` or new debug 
+patterns to `check_temp_objects.py`.
 
 ---
 
