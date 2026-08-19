@@ -79,15 +79,14 @@ The general cycle is:
 4. If hooks flag manual violations, fix them, `git add .`, and retry the commit.
 5. Repeat until all hooks pass and the commit goes through.
 
-If you need to bypass the hooks entirely for a single commit, use:
-
-```bash
-git commit -m "your message" --no-verify
-```
-
-Use this sparingly. It skips all checks and should only be used when you
-intentionally need to commit something that would otherwise fail, like the
-broken tutorial artifacts in this repo.
+> If you need to bypass the hooks entirely for a single commit, use:
+>
+>```bash
+>git commit -m "your message" --no-verify
+>```
+>Use this sparingly. It skips all checks and should only be used when you
+>intentionally need to commit something that would otherwise fail, like the
+>broken tutorial artifacts in this repo.
 
 ---
 
@@ -122,7 +121,15 @@ All steps from here on are run from inside your cloned repo.
 A virtual environment keeps the tools for this project separate from your
 system Python. Pick one of the two approaches below.
 
-### Option A: uv (recommended)
+### Option A: Python native venv
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # On Windows: .venv\Scripts\activate
+pip install pre-commit
+```
+
+### Option B: uv (recommended)
 
 uv is faster than pip and handles both the environment and package installs
 in one tool. Install it if you do not have it:
@@ -139,13 +146,7 @@ source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 uv pip install pre-commit
 ```
 
-### Option B: Python native venv
 
-```bash
-python -m venv .venv
-source .venv/bin/activate   # On Windows: .venv\Scripts\activate
-pip install pre-commit
-```
 
 You need to activate the environment every time you open a new terminal
 session before running any `pre-commit` commands.
