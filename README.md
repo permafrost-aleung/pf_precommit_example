@@ -11,6 +11,8 @@ the hooks, fix what cannot be auto-fixed, and end with a clean commit.
 > **Scope:** This tutorial is about code hygiene only. The artifacts in the `delivery/` folder
 > are intentionally broken for learning purposes and are not meant to be run
 > against a real Snowflake environment.
+>
+> **Estimated time:** 30 minutes to 1 hour for someone may be new to pre-commit.
 
 ---
 
@@ -273,9 +275,6 @@ length limit.
 **`check-temp-objects`** flagged a hardcoded account URL and password in cell 1.
 Remove them. The notebook uses `get_active_session()` which does not need
 credentials.
-
-**`check-config`** flagged unreplaced placeholders in cell 1. Replace
-`YOUR_WAREHOUSE`, `YOUR_DATABASE`, and `YOUR_SCHEMA` with real values.
 
 ---
 
