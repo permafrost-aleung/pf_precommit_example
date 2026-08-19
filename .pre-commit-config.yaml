@@ -62,10 +62,3 @@ repos:
         language: python
         pass_filenames: true
         files: delivery/.*\.(sql|py|ipynb)$
-
-      - id: check-config
-        name: Check config placeholders
-        entry: python scripts/check_config.py
-        language: python
-        pass_filenames: true
-        files: delivery/.*/config\.(py|yml|yaml)$

@@ -8,7 +8,8 @@ This tutorial walks through setting up and running pre-commit hooks on a
 Permafrost PoC project. You will start with broken delivery artifacts, run
 the hooks, fix what cannot be auto-fixed, and end with a clean commit.
 
-> **Scope:** This tutorial is about code hygiene only. The delivery artifacts
+> **Scope:** This tutorial is about code hygiene only and focuses on articles
+> under the `delivery/` folder. The delivery artifacts
 > are intentionally broken for learning purposes and are not meant to be run
 > against a real Snowflake environment.
 >
