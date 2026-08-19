@@ -8,11 +8,11 @@ This tutorial walks through setting up and running pre-commit hooks on a
 Permafrost PoC project. You will start with broken delivery artifacts, run
 the hooks, fix what cannot be auto-fixed, and end with a clean commit.
 
-> **Scope:** This tutorial is about code hygiene only. The artifacts in the `delivery/` folder
+> **Scope:** This tutorial is about code hygiene only. The delivery artifacts
 > are intentionally broken for learning purposes and are not meant to be run
 > against a real Snowflake environment.
 >
-> **Estimated time:** 30 minutes to 1 hour for someone may be new to pre-commit.
+> **Estimated time:** 30 minutes.
 
 ---
 
@@ -25,7 +25,6 @@ precommit-tutorial/
   delivery/
     python/
       transform.py              # Python script with formatting and debug violations
-      config.py                 # Config file with unreplaced placeholders
     sql/
       01_create_objects.sql     # SQL script with style and naming violations
     notebooks/
@@ -33,7 +32,6 @@ precommit-tutorial/
   scripts/
     check_naming.py             # Custom hook: flags bad object names in SQL
     check_temp_objects.py       # Custom hook: flags debug code across all file types
-    check_config.py             # Custom hook: flags unreplaced placeholders in config files
 ```
 
 ---
@@ -49,17 +47,18 @@ precommit-tutorial/
 | `nbstripout` | Strips cell outputs and execution counts | - |
 | `nbqa-black` | Python formatting in notebook cells | - |
 | `nbqa-isort` | Import ordering in notebook cells | - |
+| `nbqa-flake8` | - | Unused imports in notebook cells |
 | `check-naming` | - | Bad object names in SQL (e.g. `_v2`, `tmp_`, `_final`) |
 | `check-temp-objects` | - | Debug code, hardcoded paths, credentials |
 
 Hooks run in the order listed above.
 
-All hooks are configured in `.pre-commit-config.yaml` at the repo root. 
-You can add new hooks, remove ones you do not need, adjust file filters, 
-change tool versions, or add arguments to any hook by editing that file. 
-The custom hooks in `scripts/` can also be extended - for example, 
-adding new bad name patterns to `check_naming.py` or new debug 
-patterns to `check_temp_objects.py`.
+All hooks are configured in `.pre-commit-config.yaml` at the repo root. You
+can add new hooks, remove ones you do not need, adjust file filters, change
+tool versions, or add arguments to any hook by editing that file. The custom
+hooks in `scripts/` can also be extended - for example, adding new bad name
+patterns to `check_naming.py` or new debug code patterns to
+`check_temp_objects.py`.
 
 ---
 
@@ -87,14 +86,15 @@ The general cycle is:
 4. If hooks flag manual violations, fix them, `git add .`, and retry the commit.
 5. Repeat until all hooks pass and the commit goes through.
 
-> If you need to bypass the hooks entirely for a single commit, use:
->
->```bash
->git commit -m "your message" --no-verify
->```
->Use this sparingly. It skips all checks and should only be used when you
->intentionally need to commit something that would otherwise fail, like the
->broken tutorial artifacts in this repo.
+If you need to bypass the hooks entirely for a single commit, use:
+
+```bash
+git commit -m "your message" --no-verify
+```
+
+Use this sparingly. It skips all checks and should only be used when you
+intentionally need to commit something that would otherwise fail, like the
+broken tutorial artifacts in this repo.
 
 ---
 
@@ -154,8 +154,6 @@ source .venv/bin/activate   # On Windows: .venv\Scripts\activate
 uv pip install pre-commit
 ```
 
-
-
 You need to activate the environment every time you open a new terminal
 session before running any `pre-commit` commands.
 
@@ -184,7 +182,8 @@ pre-commit run --all-files
 
 You will see output from every hook. The following hooks rewrite files
 automatically: `sqlfluff-fix`, `black`, `isort`, `nbstripout`, `nbqa-black`,
-and `nbqa-isort`. The remaining hooks flag violations that need manual fixes.
+and `nbqa-isort`. The remaining hooks flag violations that need manual fixes,
+including `nbqa-flake8` which flags unused imports in notebook cells.
 Run it a second time after the auto-fixes to see only what remains:
 
 ```bash
@@ -264,16 +263,21 @@ length limit.
   underlying issue.
 
 - A hardcoded Snowflake account URL and password in the `__main__` block.
-  Remove the hardcoded values.
+  Remove the hardcoded values. On Permafrost projects, connection params come
+  from a Snowflake CLI connection. See `SNOWCLI_SETUP.md` for setup
   instructions.
 
 ---
 
 ### analysis.ipynb
 
-**`check-temp-objects`** flagged a hardcoded account URL and password in cell 1.
-Remove them. The notebook uses `get_active_session()` which does not need
-credentials.
+**`check-temp-objects`** flagged `print()` calls in cells 1 and 2. Notebooks
+are exploratory so `print()` is allowed, but `check-temp-objects` flags them
+as a reminder to review before delivery. Remove them if the output is not
+needed, or leave them if the cell output is intentional.
+
+**`nbqa-flake8`** flagged unused imports in cell 1. `json` and `os` are
+imported but never used. Remove them.
 
 ---
 

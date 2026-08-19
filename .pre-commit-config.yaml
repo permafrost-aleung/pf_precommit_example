@@ -32,7 +32,7 @@ repos:
       - id: nbstripout
         files: delivery/notebooks/.*\.ipynb$
 
-  # Python formatting and import sorting - notebook cells
+  # Python formatting, import sorting, and linting - notebook cells
   - repo: https://github.com/nbQA-dev/nbQA
     rev: 1.8.5
     hooks:
@@ -42,6 +42,9 @@ repos:
       - id: nbqa-isort
         files: delivery/notebooks/.*\.ipynb$
         args: [--profile=black, --line-length=88]
+      - id: nbqa-flake8
+        files: delivery/notebooks/.*\.ipynb$
+        args: [--max-line-length=88, --extend-ignore=E203]
 
   # Custom checks
   - repo: local
